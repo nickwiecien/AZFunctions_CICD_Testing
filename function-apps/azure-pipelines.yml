@@ -26,18 +26,17 @@ stages:
               addToPath: true
  
           - script: |
-              dir
-              python -m venv .venv
-              source .venv/bin/activate
               python -m pip install --upgrade pip
-              pip install -r ./function-apps/requirements.txt
+              pip install -r ./requirements.txt --target="./.python_packages/lib/site-packages" 
               pip install pytest-azurepipelines
               pip install pytest-cov
+
             displayName: "Install dependencies"
+            workingDirectory: './function-apps'
  
           - task: ArchiveFiles@2
             inputs:
-              rootFolderOrFile: "$(System.DefaultWorkingDirectory)/"
+              rootFolderOrFile: "$(System.DefaultWorkingDirectory)/function-apps"
               includeRootFolder: false
               archiveType: "zip"
               archiveFile: "$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip"

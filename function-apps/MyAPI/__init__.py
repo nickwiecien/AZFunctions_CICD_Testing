@@ -11,4 +11,4 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     resp = requests.get('https://bing.com')
     status_code = resp.status_code
 
-    return func.HttpResponse(f"Status code: {status_code}")
+    return func.HttpResponse(f"Status code from Bing: {status_code}")
