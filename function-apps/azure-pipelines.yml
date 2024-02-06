@@ -1,0 +1,70 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more.
+#  https://aka.ms/yaml
+ 
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - function-apps/*
+ 
+pool:
+  vmImage: ubuntu-latest
+ 
+stages:
+  - stage: Build
+    jobs:
+      - job: "Build"
+        displayName: "Build Functions"
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: "3.10"
+              addToPath: true
+ 
+          - script: |
+              dir
+              python -m venv .venv
+              source .venv/bin/activate
+              python -m pip install --upgrade pip
+              pip install -r ./function-apps/requirements.txt
+              pip install pytest-azurepipelines
+              pip install pytest-cov
+            displayName: "Install dependencies"
+ 
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: "$(System.DefaultWorkingDirectory)/function-apps"
+              includeRootFolder: false
+              archiveType: "zip"
+              archiveFile: "$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip"
+              replaceExistingArchive: true
+ 
+          - publish: "$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip"
+            artifact: "MyFunctions"
+            condition: succeeded()
+ 
+  - stage: CD
+    dependsOn:
+      - Build
+    jobs:
+      - deployment: MyFunctions
+        environment: CI
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: MyFunctions
+                  displayName: "Download artifact"
+                - task: AzureFunctionApp@2
+                  inputs:
+                    connectedServiceNameARM: "Function-Dev-SC"
+                    appType: "functionAppLinux"
+                    appName: "nwk-test-deploy"
+                    package: "$(Pipeline.Workspace)/**/*.zip"
+                    runtimeStack: "PYTHON|3.10"
+                    deploymentMethod: "zipDeploy"
